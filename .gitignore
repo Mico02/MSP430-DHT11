@@ -1,0 +1,23 @@
+# Mac
+.DS_Store
+.DocumentRevisions-V100
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+
+#Directories
+/.vscode
+
+#Object files
+.o
+.out
+
+#extra
+/driverlib
+/debug
+.ccproject
+.cproject
+.project
+.settings
