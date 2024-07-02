@@ -6,6 +6,7 @@
  */
 #include "DHT11.h"
 #include "driverlib.h"
+#include <stdint.h>
 
 /****** HELPER FUNCTIONS *****/
 
