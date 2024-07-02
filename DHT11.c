@@ -173,19 +173,26 @@ void setPinLow(int port, int pin){
 }
 
 
+
 /**
  * Initializes the DHT sensor on the given port and pin
  * @param port : port of pin
  * @param pin  : pin number
  */
 void DHT11_init(DHT11* sensor, int port, int pin){
+
+    //Clock setup
+    WDT_A_hold(WDT_A_BASE); // disable wdt
+    PMM_unlockLPM5(); // unlock all pins
+    CSCTL0_H = CSKEY_H; // unlock clock control registers
+    CSCTL1 = 0x0000; // set DCO to 1MHZ
+    CSCTL3 &= ~(DIVM_0); // set MCLK to /1
+    CSCTL0_H = 0; // lock clock control registers
+
     //setting struct variables to match port & pin
     sensor->port = port;
     sensor->pin = pin;
-    WDT_A_hold(WDT_A_BASE); // disable wdt
-    PMM_unlockLPM5(); // unlock all pins
 }
-
 
 
 
