@@ -11,11 +11,11 @@
 
 
 typedef struct{
-    int port;
-    int pin;
+    uint8_t port;
+    uint8_t pin;
 } DHT11;
 
-void DHT11_init(DHT11* sensor, int port, int pin);
+void DHT11_init(DHT11* sensor, uint8_t port, uint8_t pin);
 float DHT11_readTemperature(DHT11* sensor);
 float DHT11_readHumidity(DHT11* sensor);
 void DHT11_readTempHumd(DHT11* sensor, float* temperature, float* humidity);

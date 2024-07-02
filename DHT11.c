@@ -14,7 +14,7 @@
  * @param port : port of pin
  * @param pin  : pin number
  */
-void setPortOutput(int port, int pin){
+void setPortOutput(uint8_t port, uint8_t pin){
     //Checks what port was chosen and SETS the bit for the corresponding pin in PxDIR register
     switch(port){
         case 1:
@@ -55,7 +55,7 @@ void setPortOutput(int port, int pin){
  * @param port : port of pin
  * @param pin  : pin number
  */
-void setPortInput(int port, int pin){
+void setPortInput(uint8_t port, uint8_t pin){
     //Checks what port was chosen and RESETS the bit for the corresponding pin in PxDIR register
     switch(port){
         case 1:
@@ -96,7 +96,7 @@ void setPortInput(int port, int pin){
  * @param port : port of pin
  * @param pin  : pin number
  */
-void setPinHigh(int port, int pin){
+void setPinHigh(uint8_t port, uint8_t pin){
     //Checks what port was chosen and SETS the bit for the corresponding pin in PxOUT register
     switch(port){
 		case 1:
@@ -137,7 +137,7 @@ void setPinHigh(int port, int pin){
  * @param port : port of pin
  * @param pin  : pin number
  */
-void setPinLow(int port, int pin){
+void setPinLow(uint8_t port, uint8_t pin){
     //Checks what port was chosen and RESETS the bit for the corresponding pin in PxOUT register
     switch(port){
         case 1:
@@ -173,13 +173,12 @@ void setPinLow(int port, int pin){
 }
 
 
-
 /**
  * Initializes the DHT sensor on the given port and pin
  * @param port : port of pin
  * @param pin  : pin number
  */
-void DHT11_init(DHT11* sensor, int port, int pin){
+void DHT11_init(DHT11* sensor, uint8_t port, uint8_t pin){
 
     //Clock setup
     WDT_A_hold(WDT_A_BASE); // disable wdt
@@ -192,11 +191,21 @@ void DHT11_init(DHT11* sensor, int port, int pin){
     //setting struct variables to match port & pin
     sensor->port = port;
     sensor->pin = pin;
+
+    __delay_cycles(1000000); // wait 1 second after initialization
+}
+
+
+float DHT11_readTemperature(DHT11* sensor){
+    /* Setting pin low for 20mx as start signal for dh */
+    setPinLow(sensor->port, sensor->pin);
+    __delay_cycles(20000);
+    /* disabling output to pull up with external pull-up resistor */
+
 }
 
 
 
-float DHT11_readTemperature(DHT11* sensor);
 float DHT11_readHumidity(DHT11* sensor);
 void DHT11_readTempHumd(DHT11* sensor, float* temperature, float* humidity);
 
