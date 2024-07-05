@@ -7,6 +7,7 @@
 #include "DHT11.h"
 #include "driverlib.h"
 #include <stdint.h>
+#include <stdio.h>
 
 /****** HELPER FUNCTIONS *****/
 
@@ -179,17 +180,19 @@ void setPinLow(uint8_t port, uint8_t pin){
  * @param port : port of pin
  * @param pin  : pin number
  */
-void DHT11_init(DHT11* sensor, uint8_t port, uint8_t pin){
+void DHT11_init(DHT11* sensor, int port, int pin){
 
     //Clock setup
     WDT_A_hold(WDT_A_BASE); // disable wdt
     PMM_unlockLPM5(); // unlock all pins
+    int temp = CSCTL0_H;
     CSCTL0_H = CSKEY_H; // unlock clock control registers
     CSCTL1 = 0x0000; // set DCO to 1MHZ
-    CSCTL3 &= ~(DIVM_0); // set MCLK to /1
-    CSCTL0_H = 0; // lock clock control registers
+    CSCTL3 = 0x0000; // no division on clocks
+    CSCTL0_H = temp; // lock clock control registers
 
-    //setting struct variables to match port & pin
+    //allocating memory and setting struct variables to match port & pin
+    sensor = malloc(sizeof(DHT11));
     sensor->port = port;
     sensor->pin = pin;
 
@@ -198,10 +201,25 @@ void DHT11_init(DHT11* sensor, uint8_t port, uint8_t pin){
 
 
 float DHT11_readTemperature(DHT11* sensor){
-    /* Setting pin low for 20mx as start signal for dh */
+    /* Setting pin low for 20ms as start signal for dh */
+    setPortOutput(sensor->port, sensor->pin);
     setPinLow(sensor->port, sensor->pin);
     __delay_cycles(20000);
     /* disabling output to pull up with external pull-up resistor */
+    setPortInput(sensor->port, sensor->pin);
+
+    //SET THE SENSORS PIN AS A TIMER USING P1.5
+    P1SEL1 |= BIT5;
+    P1SEL0 &= ~BIT5;
+
+
+
+    //TA0CTL = 0b 0000 0010 0010 0011;
+     //Connect TA0 to SMCLK,
+    /* waiting for 80us low and 80us high */
+    __delay_cycles(160);
+    //START THE TIMER
+    return 0;
 
 }
 
