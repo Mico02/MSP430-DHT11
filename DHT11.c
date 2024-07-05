@@ -14,6 +14,25 @@ int count = 0;
 int data[40];
 
 /**
+ * Converts 8-bit sequence stored in an array into a byte.
+ * @param bits : pointer to address of array
+ * @param start: starting index of bits for the byte
+ * @param end: ending index of bits for the byte
+ * @requires bits.length >= 8 and end-start = 8.
+ */
+char bitsToByte(int* bits, int start, int end){
+    char result = 0; // stores final result
+
+    /* Iterating through each bit in the array and forms the byte in results */
+    unsigned int i;
+    for(i = start; i < end; i++){
+        result += (bits[i] << (end - 1 - i));
+    }
+
+    return result;
+}
+
+/**
  * Initializes the DHT sensor on the given port and pin
  * @param port : port of pin
  * @param pin  : pin number
@@ -52,19 +71,22 @@ float DHT11_readTemperature(DHT11* sensor){
     //Connect TA0 to SMCLK, continous mode
     TA0CTL = 0x0220;
 
-
-
     /* waiting for 80us low and 80us high */
     __delay_cycles(160);
+
+    //Enabling capture mode, interrupts, sync. capture
     TA0CCTL0 |= CAP | CCIE | CM_2 | SCS;
     _enable_interrupts();
-    while(count < 40){}
+
+    while(count < 40){} // run until all 40 bits are captured.
+
+
     int i =0;
-    int newdata[40];
-    newdata[0] - 0;
+    int bits[40];
+    bits[0] = 0;
     for(i = 1; i < 40; i++){
-        if(data[i] >= 80){ newdata[i] = 1;}
-        if(data[i] <= 80){ newdata[i] = 0;}
+        if(data[i] >= 80){ bits[i] = 1;}
+        if(data[i] <= 80){ bits[i] = 0;}
     }
     __no_operation();
     return 0;
@@ -80,10 +102,10 @@ void DHT11_readTempHumd(DHT11* sensor, float* temperature, float* humidity);
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer_A0(void)
 {
-    data[count] = TA0CCR0;
-    count++;
-    TA0CCTL0 &= ~CCIFG;
-    TA0CTL |= BIT2;
+    data[count] = TA0CCR0; //reading time from capture register
+    count++; //incrementing the number of bits captured
+    TA0CCTL0 &= ~CCIFG; //resetting interrupt flag
+    TA0CTL |= BIT2; //resetting timer
 
 }
 
