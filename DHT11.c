@@ -5,182 +5,20 @@
  *      Author: mohamedhussein
  */
 #include "DHT11.h"
+#include "digitalio.h"
 #include "driverlib.h"
 #include <stdint.h>
 #include <stdio.h>
 
-/****** HELPER FUNCTIONS *****/
-
-/**
- * Sets a GPIO pin as output given its port and pin.
- * @param port : port of pin
- * @param pin  : pin number
- */
-void setPortOutput(uint8_t port, uint8_t pin){
-    //Checks what port was chosen and SETS the bit for the corresponding pin in PxDIR register
-    switch(port){
-        case 1:
-            P1DIR |= (1 << pin);
-            break;
-        case 2:
-            P2DIR |= (1 << pin);
-            break;
-        case 3:
-            P3DIR |= (1 << pin);
-            break;
-        case 4:
-            P4DIR |= (1 << pin);
-            break;
-        case 5:
-            P5DIR |= (1 << pin);
-            break;
-        case 6:
-            P6DIR |= (1 << pin);
-            break;
-        case 7:
-            P7DIR |= (1 << pin);
-            break;
-        case 8:
-            P8DIR |= (1 << pin);
-            break;
-        case 9:
-            P9DIR |= (1 << pin);
-            break;
-        default:
-            break;
-    }
-}
-
-
-/**
- * Sets a GPIO pin as input given its port and pin.
- * @param port : port of pin
- * @param pin  : pin number
- */
-void setPortInput(uint8_t port, uint8_t pin){
-    //Checks what port was chosen and RESETS the bit for the corresponding pin in PxDIR register
-    switch(port){
-        case 1:
-            P1DIR &= ~(1 << pin);
-            break;
-        case 2:
-            P2DIR &= ~(1 << pin);
-            break;
-        case 3:
-            P3DIR &= ~(1 << pin);
-            break;
-        case 4:
-            P4DIR &= ~(1 << pin);
-            break;
-        case 5:
-            P5DIR &= ~(1 << pin);
-            break;
-        case 6:
-            P6DIR &= ~(1 << pin);
-            break;
-        case 7:
-            P7DIR &= ~(1 << pin);
-            break;
-        case 8:
-            P8DIR &= ~(1 << pin);
-            break;
-        case 9:
-            P9DIR &= ~(1 << pin);
-            break;
-        default:
-            break;
-    }
-}
-
-
-/**
- * Sets a GPIO pin as HIGH given its port and pin, pin must be set at output
- * @param port : port of pin
- * @param pin  : pin number
- */
-void setPinHigh(uint8_t port, uint8_t pin){
-    //Checks what port was chosen and SETS the bit for the corresponding pin in PxOUT register
-    switch(port){
-		case 1:
-		    P1OUT |= (1 << pin);
-		    break;
-		case 2:
-		    P2OUT |= (1 << pin);
-		    break;
-		case 3:
-		    P3OUT |= (1 << pin);
-		    break;
-		case 4:
-		    P4OUT |= (1 << pin);
-		    break;
-		case 5:
-		    P5OUT |= (1 << pin);
-		    break;
-		case 6:
-		    P6OUT |= (1 << pin);
-		    break;
-		case 7:
-		    P7OUT |= (1 << pin);
-		    break;
-		case 8:
-		    P8OUT |= (1 << pin);
-		    break;
-		case 9:
-		    P9OUT |= (1 << pin);
-		    break;
-		default:
-		    break;
-    }
-}
-
-
-/**
- * Sets a GPIO pin as LOW given its port and pin, pin must be set at output
- * @param port : port of pin
- * @param pin  : pin number
- */
-void setPinLow(uint8_t port, uint8_t pin){
-    //Checks what port was chosen and RESETS the bit for the corresponding pin in PxOUT register
-    switch(port){
-        case 1:
-            P1OUT &= ~(1 << pin);
-            break;
-        case 2:
-            P2OUT &= ~(1 << pin);
-            break;
-        case 3:
-            P3OUT &= ~(1 << pin);
-            break;
-        case 4:
-            P4OUT &= ~(1 << pin);
-            break;
-        case 5:
-            P5OUT &= ~(1 << pin);
-            break;
-        case 6:
-            P6OUT &= ~(1 << pin);
-            break;
-        case 7:
-            P7OUT &= ~(1 << pin);
-            break;
-        case 8:
-            P8OUT &= ~(1 << pin);
-            break;
-        case 9:
-            P9OUT &= ~(1 << pin);
-            break;
-        default:
-            break;
-        }
-}
-
+int count = 0;
+int data[40];
 
 /**
  * Initializes the DHT sensor on the given port and pin
  * @param port : port of pin
  * @param pin  : pin number
  */
-void DHT11_init(DHT11* sensor, int port, int pin){
+void DHT11_init(DHT11* sensor, uint8_t port, uint8_t pin){
 
     //Clock setup
     WDT_A_hold(WDT_A_BASE); // disable wdt
@@ -191,8 +29,7 @@ void DHT11_init(DHT11* sensor, int port, int pin){
     CSCTL3 = 0x0000; // no division on clocks
     CSCTL0_H = temp; // lock clock control registers
 
-    //allocating memory and setting struct variables to match port & pin
-    sensor = malloc(sizeof(DHT11));
+    //setting struct variables to match port & pin
     sensor->port = port;
     sensor->pin = pin;
 
@@ -210,15 +47,26 @@ float DHT11_readTemperature(DHT11* sensor){
 
     //SET THE SENSORS PIN AS A TIMER USING P1.5
     P1SEL1 |= BIT5;
-    P1SEL0 &= ~BIT5;
+    P1SEL0 |= BIT5;
+
+    //Connect TA0 to SMCLK, continous mode
+    TA0CTL = 0x0220;
 
 
 
-    //TA0CTL = 0b 0000 0010 0010 0011;
-     //Connect TA0 to SMCLK,
     /* waiting for 80us low and 80us high */
     __delay_cycles(160);
-    //START THE TIMER
+    TA0CCTL0 |= CAP | CCIE | CM_2 | SCS;
+    _enable_interrupts();
+    while(count < 40){}
+    int i =0;
+    int newdata[40];
+    newdata[0] - 0;
+    for(i = 1; i < 40; i++){
+        if(data[i] >= 80){ newdata[i] = 1;}
+        if(data[i] <= 80){ newdata[i] = 0;}
+    }
+    __no_operation();
     return 0;
 
 }
@@ -227,4 +75,15 @@ float DHT11_readTemperature(DHT11* sensor){
 
 float DHT11_readHumidity(DHT11* sensor);
 void DHT11_readTempHumd(DHT11* sensor, float* temperature, float* humidity);
+
+
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void Timer_A0(void)
+{
+    data[count] = TA0CCR0;
+    count++;
+    TA0CCTL0 &= ~CCIFG;
+    TA0CTL |= BIT2;
+
+}
 
