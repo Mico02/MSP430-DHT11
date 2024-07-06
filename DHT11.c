@@ -10,8 +10,15 @@
 #include <stdint.h>
 #include <stdio.h>
 
-int count = 0;
+int count;
 int data[40];
+char temp_int;
+char temp_frac;
+char humd_int;
+char humd_frac;
+char checksum;
+float temperature;
+float humidity;
 
 /**
  * Converts 8-bit sequence stored in an array into a byte.
@@ -32,6 +39,55 @@ char bitsToByte(int* bits, int start, int end){
     return result;
 }
 
+void readData(DHT11* sensor){
+    /* Setting pin low for 20ms as start signal for dh */
+        setPortOutput(sensor->port, sensor->pin);
+        setPinLow(sensor->port, sensor->pin);
+        __delay_cycles(20000);
+        /* disabling output to pull up with external pull-up resistor */
+        setPortInput(sensor->port, sensor->pin);
+
+        //SET THE SENSORS PIN AS A TIMER USING P1.5
+        P1SEL1 |= BIT5;
+        P1SEL0 |= BIT5;
+
+        //Connect TA0 to SMCLK, continous mode
+        TA0CTL = 0x0220;
+
+        /* waiting for 80us low and 80us high */
+        __delay_cycles(160);
+
+        //Enabling capture mode, interrupts, sync. capture
+        TA0CCTL0 |= CAP | CCIE | CM_2 | SCS;
+
+        count = 0; //initializing data count to zero bits
+        _enable_interrupts();
+
+        while(count < 40){} // run until all 40 bits are captured.
+
+        _disable_interrupts();
+
+
+        int i =0;
+        data[0] = 0;
+        for(i = 1; i < 40; i++){
+            if(data[i] >= 80){
+                data[i] = 1;
+            }
+            else if(data[i] <= 80){
+                data[i] = 0;
+            }
+        }
+        humd_int = bitsToByte(data, 0, 8);
+        humd_frac = bitsToByte(data, 8, 16);
+        temp_int = bitsToByte(data, 16, 24);
+        temp_frac = bitsToByte(data, 24, 32);
+        checksum = bitsToByte(data, 32, 40);
+
+        temperature = (temp_int + 0.1*temp_frac)*9/5 +32;
+        humidity = humd_int + 0.1*humd_frac;
+}
+
 /**
  * Initializes the DHT sensor on the given port and pin
  * @param port : port of pin
@@ -40,7 +96,7 @@ char bitsToByte(int* bits, int start, int end){
 void DHT11_init(DHT11* sensor, uint8_t port, uint8_t pin){
 
     //Clock setup
-    WDT_A_hold(WDT_A_BASE); // disable wdt
+    WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
     PMM_unlockLPM5(); // unlock all pins
     int temp = CSCTL0_H;
     CSCTL0_H = CSKEY_H; // unlock clock control registers
@@ -57,46 +113,23 @@ void DHT11_init(DHT11* sensor, uint8_t port, uint8_t pin){
 
 
 float DHT11_readTemperature(DHT11* sensor){
-    /* Setting pin low for 20ms as start signal for dh */
-    setPortOutput(sensor->port, sensor->pin);
-    setPinLow(sensor->port, sensor->pin);
-    __delay_cycles(20000);
-    /* disabling output to pull up with external pull-up resistor */
-    setPortInput(sensor->port, sensor->pin);
 
-    //SET THE SENSORS PIN AS A TIMER USING P1.5
-    P1SEL1 |= BIT5;
-    P1SEL0 |= BIT5;
-
-    //Connect TA0 to SMCLK, continous mode
-    TA0CTL = 0x0220;
-
-    /* waiting for 80us low and 80us high */
-    __delay_cycles(160);
-
-    //Enabling capture mode, interrupts, sync. capture
-    TA0CCTL0 |= CAP | CCIE | CM_2 | SCS;
-    _enable_interrupts();
-
-    while(count < 40){} // run until all 40 bits are captured.
-
-
-    int i =0;
-    int bits[40];
-    bits[0] = 0;
-    for(i = 1; i < 40; i++){
-        if(data[i] >= 80){ bits[i] = 1;}
-        if(data[i] <= 80){ bits[i] = 0;}
-    }
-    __no_operation();
-    return 0;
+    readData(sensor);
+    return temperature;
 
 }
 
 
 
-float DHT11_readHumidity(DHT11* sensor);
-void DHT11_readTempHumd(DHT11* sensor, float* temperature, float* humidity);
+float DHT11_readHumidity(DHT11* sensor){
+    readData(sensor);
+    return humidity;
+}
+void DHT11_readTempHumd(DHT11* sensor, float* temp, float* humid){
+    readData(sensor);
+    *temp = temperature;
+    *humid= humidity;
+}
 
 
 #pragma vector=TIMER0_A0_VECTOR
